@@ -1,0 +1,62 @@
+#BiocManager::install("escape")
+#https://www.borch.dev/uploads/screpertoire/articles/running_escape
+library(escape)
+library(ggplot2)
+library(Seurat)
+
+### 1. Built-In gene sets ------------------------------------------------------
+
+gene.sets <- list("Bcells "= c("MS4A1","CD79B","CD79A","IGH1","IGH2"),
+                  "Myeloid" = c("SPI1","FCER1G","CSF1R"),
+                  "Tcells"= c("CD3E", "CD3D", "CD3G", "CD7","CD8A"))
+
+### 2.Performing Enrichment Calculation ----------------------------------------
+enrichment.scores <- escape.matrix(scRep_example, 
+                                   gene.sets = GS.hallmark, 
+                                   groups = 5000, 
+                                   min.size = 5)
+
+### 3. runEscape ---------------------------------------------------------------
+scRep_example <- runEscape(scRep_example, 
+                           method = "ssGSEA",
+                           gene.sets = GS.hallmark, 
+                           groups = 5000, 
+                           min.size = 0,
+                           new.assay.name = "escape.ssGSEA")
+
+#Define color palette 
+colorblind_vector <- hcl.colors(n=7, palette = "inferno", fixup = TRUE)
+
+FeaturePlot(scRep_example, "HALLMARK-APOPTOSIS") + 
+  scale_color_gradientn(colors = colorblind_vector) + 
+  theme(plot.title = element_blank())
+
+scRep_example <- performNormalization(scRep_example, 
+                                      assay = "escape.ssGSEA", 
+                                      gene.sets = GS.hallmark)
+
+
+scRep_example <- performNormalization(scRep_example, 
+                                      assay = "escape.ssGSEA", 
+                                      gene.sets = GS.hallmark, 
+                                      scale.factor = scRep_example$nFeature_RNA)
+
+
+### 4.Visualizations -----------------------------------------------------------
+#heatmapEnrichment
+heatmapEnrichment(scRep_example, 
+                  group.by = "ident",
+                  gene.set.use = rownames(scRep_example@assays$escape.ssGSEA@data)[1:12],
+                  assay = "escape.ssGSEA")
+
+#geyserEnrichment
+geyserEnrichment(scRep_example, 
+                 assay = "escape.ssGSEA",
+                 gene.set = "HALLMARK-INTERFERON-GAMMA-RESPONSE", 
+                 facet.by = "Type",
+                 color.by  = "HALLMARK-INTERFERON-GAMMA-RESPONSE")
+#densityEnrichment
+densityEnrichment(scRep_example, 
+                  gene.set.use = "HALLMARK-IL6-JAK-STAT3-SIGNALING", 
+                  group.by = "orig.ident",
+                  gene.sets = GS.hallmark)
